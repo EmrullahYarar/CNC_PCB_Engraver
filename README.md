@@ -26,7 +26,7 @@ graph TD
 
     %% Master Board
     subgraph Master_Control [Master Controller]
-        Master{"🧠 Master Board<br/>(grblHAL - STM32)"}
+        Master{"Master Board<br/>(grblHAL - STM32)"}
     end
 
     %% Z Ekseni
@@ -47,7 +47,7 @@ graph TD
 
     %% X ve Y Kapalı Çevrim (Servo) Sistemi
     subgraph XY_Axis [X & Y Axes - Closed Loop Servo]
-        Slave{"⚙️ Slave Board<br/>(STM32F401)"}
+        Slave{"Slave Board<br/>(STM32F401)"}
         BTS7960["BTS7960B Drivers<br/>(43A)"]
         DCMotor["Brushed DC Motors"]
         Encoder["Optical Encoders"]
@@ -62,5 +62,5 @@ graph TD
     end
 
     %% Topraklama (Statik)
-    Earth(("🌍 220V Earth<br/>(Star Grounding)"))
+    Earth(("220V Earth<br/>(Star Grounding)"))
     BLDC -. "Chassis Ground" .-> Earth
