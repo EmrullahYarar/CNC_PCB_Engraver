@@ -17,35 +17,50 @@ All the other features are supported from grblHAL, X,Y and Z calibration works. 
 
 Only the axis are tested and calibrated. Project is ongoing.
 
+## System Architecture (Hardware & Signal Flow)
 
-[ COMPUTER / gSender ]
-       │ (USB)
-       ▼
-╔══════════════════════════════════════════════════════════════════════════════════════╗
-║                           MASTER BOARD (grblHAL - STM32)                             ║
-║ Task: G-Code processing, synchronization, and assigning target coordinates to axes   ║
-╚══════════════════════════════════════════════════════════════════════════════════════╝
-       │                        │                           │                   ▲
-   [Z Axis]                 [Spindle]               [X and Y Axes]              │
-  (Step/Dir)             (PWM - PA8 Pin)              (Step/Dir)        (Alarm / E-Stop)
-       │                        │                           │                   │
-       ▼                        ▼                           ▼                   │
-┌──────────────┐        ┌──────────────────┐       ╔═════════════════════════════════╗
-│ A4988 Driver │        │  40A YELLOW ESC  │       ║    SLAVE BOARD (STM32F401)      ║
-│ (vRef: 1.5A) │        │(Red Pin Floating)│       ║    (Closed-Loop Controller)     ║
-└──────────────┘        └──────────────────┘       ╚═════════════════════════════════╝
-       │                        │                           │                   ▲
-  (4 Wires /                    │                     (PWM & Enable)      (Sensor Data)
-   Bipolar)              (3 Phase Wires)                    │                   │
-       │                        │                           ▼                   │
-       ▼                        ▼                  ┌──────────────┐   ┌──────────────┐
-┌──────────────┐        ┌──────────────────┐       │   BTS7960B   │   │   OPTICAL    │
-│   17HS4401   │        │ BRUSHLESS MOTOR  │       │   Drivers    │   │   ENCODER    │
-│   NEMA 17    │        │    (Spindle)     │       │  (43A X/Y)   │   │  (Sensors)   │
-└──────────────┘        └──────────────────┘       └──────────────┘   └──────────────┘
-       │                        │                           │                   ▲
-(Liquid Greased                 ▼                           ▼                   │
- T8 Leadscrew)            [220V EARTH]             ┌──────────────┐    (Mechanical Link
-                       (Star Grounding)            │  Brushed DC  │────   via Shaft)
-                                                   │    Motors    │
-                                                   └──────────────┘
+```mermaid
+graph TD
+    %% Ana Kontrolcü
+    PC["💻 Computer / gSender"] -- USB --> Master
+
+    %% Master Board
+    subgraph Master_Control [Master Controller]
+        Master{"🧠 Master Board<br/>(grblHAL - STM32)"}
+    end
+
+    %% Z Ekseni
+    subgraph Z_Axis [Z Axis - Open Loop]
+        A4988["A4988 Driver<br/>(vRef: 1.5A)"]
+        NEMA17["17HS4401 NEMA 17<br/>(Stepper)"]
+        Master -- "Step/Dir" --> A4988
+        A4988 -- "4 Wires (Bipolar)" --> NEMA17
+    end
+
+    %% İş Mili (Spindle)
+    subgraph Spindle_System [Spindle System - BLDC]
+        ESC["40A Yellow ESC<br/>(Red Pin Floating)"]
+        BLDC["Brushless Motor<br/>(Spindle)"]
+        Master -- "PWM (PA8)" --> ESC
+        ESC -- "3 Phase Wires" --> BLDC
+    end
+
+    %% X ve Y Kapalı Çevrim (Servo) Sistemi
+    subgraph XY_Axis [X & Y Axes - Closed Loop Servo]
+        Slave{"⚙️ Slave Board<br/>(STM32F401)"}
+        BTS7960["BTS7960B Drivers<br/>(43A)"]
+        DCMotor["Brushed DC Motors"]
+        Encoder["Optical Encoders"]
+        
+        Master -- "Step/Dir" --> Slave
+        Slave -- "Alarm / E-Stop" --> Master
+        
+        Slave -- "PWM & Enable" --> BTS7960
+        BTS7960 -- "High Current" --> DCMotor
+        DCMotor -. "Mechanical Link" .-> Encoder
+        Encoder -- "Sensor Data" --> Slave
+    end
+
+    %% Topraklama (Statik)
+    Earth(("🌍 220V Earth<br/>(Star Grounding)"))
+    BLDC -. "Chassis Ground" .-> Earth
