@@ -1,4 +1,7 @@
-# CNC_PCB_Engraver
+# CNC_Plotter
+
+Project purpose is changed due to case of ink printer. It is not suitable for this job. When the spindle motor works the hole case vibrates to much to engrave PCB. The project will be revised and will be become CNC_plotter with the same equipment.
+
 Simplest DIY CNC engraver for double sided PCBs. The base of project uses grblHAL and the system is built on ink printer case. The system works with master and slave stm32 controller for open and closed loop motor control mechaniscms.
 
 Z_axis:
